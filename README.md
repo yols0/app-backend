@@ -20,3 +20,26 @@
 | `/report/<id>` |  `PUT`   | RF2.5    | Modify report info             |
 
 <!-- | `/report/stats` |  `GET`   | RF2.4    | Get report stats        | -->
+
+## Role numbers/permission levels
+
+| Number | Role    |
+| ------ | ------- |
+| `0`    | Root    |
+| `1`    | Admin   |
+| `2`    | Visitor |
+
+## Category numbers
+
+| Number | Category          |
+| ------ | ----------------- |
+| `0`    | Other             |
+| `1`    | Luminary          |
+| `2`    | Dog Feces         |
+| `3`    | Branches          |
+| `4`    | Overgrown Grass   |
+| `5`    | Facilities Fault  |
+| `6`    | Leashless Dog     |
+| `7`    | Garbage           |
+| `8`    | Facilities Misuse |
+
