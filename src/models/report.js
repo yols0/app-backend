@@ -75,7 +75,7 @@ reportSchema.pre('validate', function (next) {
             'locationString',
             'locationGeo',
             'desc',
-        ].filter((field) => !report.mustHaveField(field));
+        ].filter((field) => !report.canHaveField(field));
         if (invalid) {
             throw new Error(
                 `Invalid fields for given report category: ${invalid.join()}`

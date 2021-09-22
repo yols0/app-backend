@@ -26,10 +26,10 @@ function aggregateError(error, superClassValidation) {
 }
 
 // Base class for all Report objects
-// When asking if it has a field, only fields that are NOT defined in the
+// When asking if it can have a field, only fields that are NOT defined in the
 // generic report should be asked.
 class Report {
-    mustHaveField(_) {
+    canHaveField(_) {
         return false;
     }
 
@@ -43,8 +43,8 @@ class Report {
 class LocatedReport extends Report {
     static fields = new Set(['locationString', 'locationGeo']);
 
-    mustHaveField(field) {
-        return super.mustHaveField(field) || LocatedReport.fields.has(field);
+    canHaveField(field) {
+        return super.canHaveField(field) || LocatedReport.fields.has(field);
     }
 
     validate() {
@@ -61,8 +61,8 @@ class LocatedReport extends Report {
 
 class DescribedReport extends LocatedReport {
     static fields = new Set(['desc']);
-    mustHaveField(field) {
-        return super.mustHaveField(field) || DescribedReport.fields.has(field);
+    canHaveField(field) {
+        return super.canHaveField(field) || DescribedReport.fields.has(field);
     }
 
     validate() {
@@ -77,8 +77,8 @@ class DescribedReport extends LocatedReport {
 
 class LuminaryReport extends Report {
     static fields = new Set(['luminaryCode']);
-    mustHaveField(field) {
-        return super.mustHaveField(field) || LuminaryReport.fields.has(field);
+    canHaveField(field) {
+        return super.canHaveField(field) || LuminaryReport.fields.has(field);
     }
 
     validate() {

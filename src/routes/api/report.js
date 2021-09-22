@@ -1,6 +1,9 @@
 const express = require('express');
+const requireToken = require('../../middleware/requireToken');
 
 const router = express.Router();
+
+router.use(requireToken());
 
 // @route   GET api/v1/report
 // @desc    Query reports

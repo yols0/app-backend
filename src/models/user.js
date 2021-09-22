@@ -3,13 +3,21 @@ const bcrypt = require('bcrypt');
 const { Schema } = mongoose;
 const { isEmail } = require('validator');
 
+// Import environment variables
+require('dotenv').config();
+
+// Optinally specify salt rounds
+const SALT_ROUNDS = parseInt(process.env.SALT_ROUNDS) || 10;
+
 const userSchema = new Schema({
     email: {
         type: String,
         required: [true, 'Email is required'],
+        minlength: [3, 'Email must be at least 3 character'],
         maxlength: [320, 'Email must be less than 320 characters'],
         validate: [isEmail, 'Invalid email'],
-        createIndexes: { unique: true },
+        unique: true,
+        // createIndexes: { unique: true },
         trim: true,
     },
     pwHash: {
@@ -31,9 +39,11 @@ const userSchema = new Schema({
         trim: true,
     },
     role: {
-        type: Integer,
+        type: Number,
         required: true,
         default: 2,
+        get: (v) => Math.round(v),
+        set: (v) => Math.round(v),
     },
     notificationsEnabled: {
         type: Boolean,
@@ -59,7 +69,7 @@ userSchema.pre('save', async function (next) {
     }
     try {
         const salt = await bcrypt.genSalt(10);
-        const hash = await bcrypt.hash(user.pwHash, salt);
+        const hash = await bcrypt.hash(this.pwHash, salt);
         this.pwHash = hash;
         next();
     } catch (err) {
@@ -67,8 +77,32 @@ userSchema.pre('save', async function (next) {
     }
 });
 
-userSchema.methods.comparePassword = async function (password) {
+// Compare a plain text password against the hashed password
+userSchema.methods.validatePassword = async function (password) {
     return await bcrypt.compare(password, this.pwHash);
+};
+
+// Get user public data
+userSchema.methods.getPublicData = function () {
+    return {
+        firstName: this.firstName,
+        lastName: this.lastName,
+        email: this.email,
+    };
+};
+
+// Get user full data
+userSchema.methods.getFullData = function () {
+    return {
+        id: this._id,
+        firstName: this.firstName,
+        lastName: this.lastName,
+        email: this.email,
+        role: this.role,
+        notificationsEnabled: this.notificationsEnabled,
+        appNotificationsEnabled: this.appNotificationsEnabled,
+        emailNotificationsEnabled: this.emailNotificationsEnabled,
+    };
 };
 
 module.exports = mongoose.model('User', userSchema);
