@@ -1,6 +1,7 @@
 const mongoose = require('mongoose');
 const bcrypt = require('bcrypt');
 const { Schema } = mongoose;
+const Int32 = require('mongoose-int32').loadType(mongoose);
 const { isEmail } = require('validator');
 
 // Import environment variables
@@ -39,11 +40,9 @@ const userSchema = new Schema({
         trim: true,
     },
     role: {
-        type: Number,
+        type: Int32,
         required: true,
         default: 2,
-        get: (v) => Math.round(v),
-        set: (v) => Math.round(v),
     },
     notificationsEnabled: {
         type: Boolean,
@@ -68,7 +67,7 @@ userSchema.pre('save', async function (next) {
         return next();
     }
     try {
-        const salt = await bcrypt.genSalt(10);
+        const salt = await bcrypt.genSalt(SALT_ROUNDS);
         const hash = await bcrypt.hash(this.pwHash, salt);
         this.pwHash = hash;
         next();
@@ -85,6 +84,7 @@ userSchema.methods.validatePassword = async function (password) {
 // Get user public data
 userSchema.methods.getPublicData = function () {
     return {
+        id: this._id,
         firstName: this.firstName,
         lastName: this.lastName,
         email: this.email,
@@ -105,4 +105,4 @@ userSchema.methods.getFullData = function () {
     };
 };
 
-module.exports = mongoose.model('User', userSchema);
+module.exports = userSchema;

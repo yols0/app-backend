@@ -49,9 +49,13 @@ class LocatedReport extends Report {
 
     validate() {
         let error = '';
-        if (!this.data.locationString && !this.data.locationGeo) {
+
+        const locStr = !!this.data.locationString;
+        const locGeo = !!this.data.locationGeo;
+
+        if (!locStr && !locGeo) {
             error = 'Missing location info.';
-        } else if (this.data.locationString && this.data.locationGeo) {
+        } else if (locStr && locGeo) {
             error = 'Location info is ambiguous.';
         }
 
@@ -83,8 +87,14 @@ class LuminaryReport extends Report {
 
     validate() {
         let error = '';
-        if (!this.data.luminaryCode) {
+
+        const code = !!this.data.luminaryCode;
+        const image = !!this.data.image;
+
+        if (!code && !image) {
             error = 'Missing luminary code.';
+        } else if (code && image) {
+            error = 'Luminary code and image are both present.';
         }
 
         aggregateError(error, () => super.validate());

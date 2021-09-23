@@ -9,7 +9,7 @@ require('dotenv').config();
 const PORT = parseInt(process.env.PORT) || 3000;
 
 // Initialize connection to database
-require('./db');
+// require('./db');
 
 // Initialize express app
 const app = express();

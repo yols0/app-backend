@@ -1,9 +1,9 @@
 const express = require('express');
-const User = require('../../models/user');
-const { Error } = require('mongoose');
+const MongooseError = require('mongoose').Error;
 const requireToken = require('../../middleware/requireToken');
-const requireParams = require('../../middleware/requireParams');
+const requireFields = require('../../middleware/requireFields');
 const requireMinRole = require('../../middleware/requireMinRole');
+const { User } = require('../../models');
 
 const router = express.Router();
 
@@ -35,7 +35,7 @@ router.post('/', (req, res, next) => {
         user.save((err, user) => {
             if (err) {
                 // Error when invalid fields are sent
-                if (err instanceof Error.ValidationError) {
+                if (err instanceof MongooseError.ValidationError) {
                     return res.status(400).send({ error: err.message });
                 }
                 // Error when a duplicate email is sent
@@ -107,7 +107,7 @@ router.put(
     '/:id',
     requireToken(),
     requireMinRole(1),
-    requireParams('role'),
+    requireFields('role'),
     async (req, res, next) => {
         try {
             const { role } = req.body;

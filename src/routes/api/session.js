@@ -1,8 +1,8 @@
 const express = require('express');
 const jwt = require('jsonwebtoken');
-const requireParams = require('../../middleware/requireParams');
+const requireFields = require('../../middleware/requireFields');
 const requireToken = require('../../middleware/requireToken');
-const User = require('../../models/user');
+const { User } = require('../../models');
 
 // Import environment variables
 require('dotenv').config();
@@ -33,7 +33,7 @@ router.get('/', requireToken(), async (req, res, next) => {
 // @route   POST api/v1/session
 // @desc    Create new session
 // @access  Public
-router.post('/', requireParams('email', 'password'), async (req, res, next) => {
+router.post('/', requireFields('email', 'password'), async (req, res, next) => {
     try {
         const { email, password } = req.body;
         const user = await User.findOne({ email });

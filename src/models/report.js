@@ -1,9 +1,13 @@
 const mongoose = require('mongoose');
 const { Schema } = mongoose;
+const Int32 = require('mongoose-int32').loadType(mongoose);
+const imageSchema = require('./image');
 
-const { ReportFactory } = require('../../utils/reportDefinitions');
+const { ReportFactory } = require('../utils/reportDefinitions');
 
+// Schema used for a GeoJSON point
 const pointSchema = new Schema({
+    _id: false,
     type: {
         type: String,
         enum: {
@@ -18,11 +22,11 @@ const pointSchema = new Schema({
     },
 });
 
+// Actual report schema
 const reportSchema = new Schema({
     category: {
-        type: Integer,
+        type: Int32,
         required: [true, 'Category is required'],
-        default: 0,
     },
     creationDate: {
         type: Date,
@@ -30,7 +34,7 @@ const reportSchema = new Schema({
         default: Date.now,
     },
     status: {
-        type: Integer,
+        type: Int32,
         required: true,
         default: 0,
     },
@@ -61,6 +65,17 @@ const reportSchema = new Schema({
         maxLength: [255, 'Description must be less than 255 characters'],
         trim: true,
     },
+    image: {
+        type: imageSchema,
+    },
+});
+
+// Virtual property to get the image file name
+reportSchema.virtual('imageFileName').get(function () {
+    if (this.image) {
+        return this.image._id.toString() + '.' + this.image.extension;
+    }
+    return null;
 });
 
 // Special report dependant validation by category
@@ -91,4 +106,4 @@ reportSchema.pre('validate', function (next) {
     }
 });
 
-module.exports = mongoose.model('Report', reportSchema);
+module.exports = reportSchema;
