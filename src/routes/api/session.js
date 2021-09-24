@@ -3,14 +3,12 @@ const jwt = require('jsonwebtoken');
 const requireFields = require('../../middleware/requireFields');
 const requireToken = require('../../middleware/requireToken');
 const { User } = require('../../models');
-
-// Import environment variables
-require('dotenv').config();
+const { UnsetEnvError } = require('../../utils/errors');
 
 const TOKEN_SECRET = process.env.TOKEN_SECRET;
 
 if (!TOKEN_SECRET) {
-    throw new Error('TOKEN_SECRET not defined');
+    throw new UnsetEnvError('TOKEN_SECRET');
 }
 
 const ACCESS_EXPIRATON = parseInt(process.env.ACCESS_EXPIRATON) || 1800;

@@ -1,12 +1,10 @@
 const jwtMiddleware = require('express-jwt');
-
-// Import environmental variables
-require('dotenv').config();
+const { UnsetEnvError } = require('../utils/errors');
 
 const TOKEN_SECRET = process.env.TOKEN_SECRET;
 
 if (!TOKEN_SECRET) {
-    throw new Error('TOKEN_SECRET not defined');
+    throw new UnsetEnvError('TOKEN_SECRET');
 }
 
 module.exports = function (type = 'access') {

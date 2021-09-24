@@ -70,19 +70,11 @@ const reportSchema = new Schema({
     },
 });
 
-// Virtual property to get the image file name
-reportSchema.virtual('imageFileName').get(function () {
-    if (this.image) {
-        return this.image._id.toString() + '.' + this.image.extension;
-    }
-    return null;
-});
-
 // Special report dependant validation by category
 reportSchema.pre('validate', function (next) {
     try {
         // Cast report by category number
-        const report = ReportFactory(this.category, this);
+        const report = ReportFactory.getReport(this.category, this);
 
         // Check for specific (non generic report) fields
         const invalid = [
@@ -90,7 +82,7 @@ reportSchema.pre('validate', function (next) {
             'locationString',
             'locationGeo',
             'desc',
-        ].filter((field) => !report.canHaveField(field));
+        ].filter((field) => this[field] && !report.canHaveField(field));
         if (invalid) {
             throw new Error(
                 `Invalid fields for given report category: ${invalid.join()}`

@@ -2,14 +2,12 @@ const mongoose = require('mongoose');
 const imageSchema = require('./image');
 const reportSchema = require('./report');
 const userSchema = require('./user');
-
-// Import environment variables
-require('dotenv').config();
+const { UnsetEnvError } = require('../utils/errors');
 
 const MONGODB_URI = process.env.MONGODB_URI;
 
 if (!process.env.MONGODB_URI) {
-    throw new Error('MONGODB_URI must be defined');
+    throw new UnsetEnvError('MONGODB_URI');
 }
 
 // Use schema export pattern

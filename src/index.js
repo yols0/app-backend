@@ -1,9 +1,9 @@
+// Import environment variables
+require('dotenv').config();
+
 const express = require('express');
 const apiRoutes = require('./routes/api');
 const errorHandler = require('./middleware/errorHandler');
-
-// Import environment variables
-require('dotenv').config();
 
 // Optionally specify port
 const PORT = parseInt(process.env.PORT) || 3000;

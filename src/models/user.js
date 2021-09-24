@@ -4,9 +4,6 @@ const { Schema } = mongoose;
 const Int32 = require('mongoose-int32').loadType(mongoose);
 const { isEmail } = require('validator');
 
-// Import environment variables
-require('dotenv').config();
-
 // Optinally specify salt rounds
 const SALT_ROUNDS = parseInt(process.env.SALT_ROUNDS) || 10;
 

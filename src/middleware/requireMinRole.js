@@ -11,7 +11,7 @@ module.exports = function (role) {
             return next();
         } else {
             return res.status(403).send({
-                message: 'User is not authorized for this',
+                message: 'User is not authorized for this action',
             });
         }
     };
