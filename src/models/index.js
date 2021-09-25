@@ -19,4 +19,6 @@ const Image = conn.model('Image', imageSchema);
 const Report = conn.model('Report', reportSchema);
 const User = conn.model('User', userSchema);
 
+conn.on('error', console.error.bind(console, 'connection error:'));
+
 module.exports = { conn, Image, Report, User };

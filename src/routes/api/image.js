@@ -1,6 +1,7 @@
 const express = require('express');
 const requireToken = require('../../middleware/requireToken');
-const { Report } = require('../../models');
+const validateId = require('../../middleware/validateId');
+const { Report, Image } = require('../../models');
 
 const router = express.Router();
 
@@ -15,15 +16,26 @@ router.use(requireToken());
 // @route   GET api/image/:id
 // @desc    Get image
 // @access  Private
-router.get('/:id', (req, res) => {
-    if (req.user.role >= 2) {
-        // Find if the image belongs to a report created by the user
-        const report = Report.findOne({ 'image.id': req.params.id });
-        if (report.creator.id != req.user.id) {
-            return res.status(401).json({ msg: 'Not authorized' });
+router.get('/:id', validateId, async (req, res) => {
+    try {
+        if (req.user.role >= 2) {
+            // Find if the image belongs to a report created by the user
+            const report = await Report.findOne({ 'image.id': req.params.id });
+            if (report.creator != req.user.id) {
+                return res
+                    .status(401)
+                    .json({ msg: 'Not authorized to view this image' });
+            }
         }
+
+        const image = await Image.findOne({ _id: req.params.id });
+        if (!image) {
+            return res.status(404).json({ msg: 'Image not found' });
+        }
+        return res.sendFile(`${UPLOADS_DIR}/${image.fileName}`);
+    } catch (err) {
+        return next(err);
     }
-    return res.sendFile(`${UPLOADS_DIR}/${req.params.filename}`);
 });
 
 module.exports = router;

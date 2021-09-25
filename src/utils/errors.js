@@ -5,15 +5,23 @@ class UnsetEnvError extends Error {
     }
 }
 
-class ReportCreationError extends Error {
-    constructor(message, code) {
+class ApiRequestError extends Error {
+    constructor(message, statusCode = 500) {
         super(message);
-        this.name = 'ReportCreationError';
-        this.code = code;
+        this.name = 'ApiRequestError';
+        this.statusCode = statusCode;
+    }
+}
+
+class InvalidReportError extends Error {
+    constructor(message) {
+        super(message);
+        this.name = 'InvalidReportError';
     }
 }
 
 module.exports = {
     UnsetEnvError,
-    ReportCreationError,
+    ApiRequestError,
+    InvalidReportError,
 };

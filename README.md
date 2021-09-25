@@ -21,6 +21,24 @@
 
 <!-- | `/report/stats` |  `GET`   | RF2.4    | Get report stats        | -->
 
+### /user querying parameters
+
+| Parameter | Goal                                               | Default |
+| --------- | -------------------------------------------------- | ------- |
+| `name`    | Partial search text of user's first and last names | Any     |
+| `skip`    | Number of users to skip on the search              | None    |
+
+### /report querying parameters
+
+| Parameter  | Goal                                              | Default                                      |
+| ---------- | ------------------------------------------------- | -------------------------------------------- |
+| `status`   | Filter by current status                          | Any                                          |
+| `category` | Filter by category                                | Any                                          |
+| `creator`  | Filter by creator's user ID                       | Admin - Any<br />Visitor - Own ID (enforced) |
+| `from`     | Filter by lower limit of creationDate (inclusive) | Any                                          |
+| `to`       | Filter by pper limit of creationDate (exclusive)  | Current date                                 |
+| `limit`    | Number of results returned                        | Defined max possible results                 |
+
 ## Role numbers/permission levels
 
 | Number | Role    |

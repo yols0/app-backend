@@ -2,7 +2,7 @@ const mongoose = require('mongoose');
 const { Schema } = mongoose;
 const Int32 = require('mongoose-int32').loadType(mongoose);
 const imageSchema = require('./image');
-
+const { InvalidReportError } = require('../utils/errors');
 const { ReportFactory } = require('../utils/reportDefinitions');
 
 // Schema used for a GeoJSON point
@@ -83,8 +83,8 @@ reportSchema.pre('validate', function (next) {
             'locationGeo',
             'desc',
         ].filter((field) => this[field] && !report.canHaveField(field));
-        if (invalid) {
-            throw new Error(
+        if (invalid.length) {
+            throw new InvalidReportError(
                 `Invalid fields for given report category: ${invalid.join()}`
             );
         }
@@ -97,5 +97,30 @@ reportSchema.pre('validate', function (next) {
         next(err);
     }
 });
+
+reportSchema.method.getData = function () {
+    const data = {
+        id: this._id,
+        category: this.category,
+        creationDate: this.creationDate,
+        status: this.status,
+        endMessage: this.endMessage,
+        creator: this.creator,
+        luminaryCode: this.luminaryCode,
+        locationString: this.locationString,
+        locationGeo: this.locationGeo,
+        desc: this.desc,
+        image: this.image._id,
+    };
+
+    // Delete undefined fields
+    Object.keys(data).forEach((key) => {
+        if (data[key] === undefined) {
+            delete data[key];
+        }
+    });
+
+    return data;
+};
 
 module.exports = reportSchema;

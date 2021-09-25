@@ -1,12 +1,7 @@
+const { InvalidReportError } = require('./errors');
+
 // Character to use to join error messages when aggregating
 const JOIN_CHAR = ' ';
-
-class InvalidReportError extends Error {
-    constructor(message) {
-        super(message);
-        this.name = 'InvalidReportError';
-    }
-}
 
 // Mechanism to aggregate all error messages generated when validating a report
 function aggregateError(error, superClassValidation) {

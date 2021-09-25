@@ -102,4 +102,6 @@ userSchema.methods.getFullData = function () {
     };
 };
 
+userSchema.index({ firstName: 'text', lastName: 'text' });
+
 module.exports = userSchema;
