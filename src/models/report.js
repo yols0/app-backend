@@ -40,7 +40,6 @@ const reportSchema = new Schema({
     },
     endMessage: {
         type: String,
-        required: false,
     },
     creator: {
         type: Schema.Types.ObjectId,
@@ -92,16 +91,16 @@ reportSchema.pre('validate', function (next) {
         // Validate further
         report.validate();
 
-        next();
+        return next();
     } catch (err) {
-        next(err);
+        return next(err);
     }
 });
 
-reportSchema.method.getData = function () {
+reportSchema.methods.getData = function () {
     const data = {
         id: this._id,
-        category: this.category,
+        category: this.category.toString(),
         creationDate: this.creationDate,
         status: this.status,
         endMessage: this.endMessage,

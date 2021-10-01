@@ -11,6 +11,13 @@ const router = express.Router();
 // Enable JSON parsing middleware
 router.use(express.json());
 
+router.use((req, _, next) => {
+    // console.log(req.body);
+    // console.log(req.headers);
+
+    return next();
+});
+
 // Check JSON validity
 router.use(verifyJson);
 

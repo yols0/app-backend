@@ -3,6 +3,7 @@ const bcrypt = require('bcrypt');
 const { Schema } = mongoose;
 const Int32 = require('mongoose-int32').loadType(mongoose);
 const { isEmail } = require('validator');
+const { randomIntGenerator } = require('../utils');
 
 // Optinally specify salt rounds
 const SALT_ROUNDS = parseInt(process.env.SALT_ROUNDS) || 10;
@@ -56,6 +57,16 @@ const userSchema = new Schema({
         required: true,
         default: false,
     },
+    profilePicture: {
+        type: Int32,
+        required: true,
+        default: randomIntGenerator(0, 25),
+    },
+    lastSeen: {
+        type: Date,
+        required: true,
+        default: Date.now,
+    },
 });
 
 // Generate a hash for the user's password on creation
@@ -67,10 +78,21 @@ userSchema.pre('save', async function (next) {
         const salt = await bcrypt.genSalt(SALT_ROUNDS);
         const hash = await bcrypt.hash(this.pwHash, salt);
         this.pwHash = hash;
-        next();
+        return next();
     } catch (err) {
-        next(err);
+        return next(err);
     }
+});
+
+// Also delete all the user's reports
+userSchema.pre('remove', async function (next) {
+    const reports = await this.model('Report').find({ creator: this._id });
+
+    await Promise.all(
+        reports.map(async (report) => {
+            await report.remove();
+        })
+    );
 });
 
 // Compare a plain text password against the hashed password
@@ -85,6 +107,7 @@ userSchema.methods.getPublicData = function () {
         firstName: this.firstName,
         lastName: this.lastName,
         email: this.email,
+        profilePicture: this.profilePicture,
     };
 };
 
@@ -99,6 +122,7 @@ userSchema.methods.getFullData = function () {
         notificationsEnabled: this.notificationsEnabled,
         appNotificationsEnabled: this.appNotificationsEnabled,
         emailNotificationsEnabled: this.emailNotificationsEnabled,
+        profilePicture: this.profilePicture,
     };
 };
 

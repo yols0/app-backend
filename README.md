@@ -1,6 +1,6 @@
 # app-backend
 
-## /api/v1 endpoints
+## `/api/v1` endpoints
 
 | Route          |  Method  | Use case | Goal                           |
 | -------------- | :------: | -------- | ------------------------------ |
@@ -13,22 +13,22 @@
 | `/session`     |  `GET`   | RF1.2    | Check session/get current user |
 | `/session`     |  `POST`  | RF1.2    | Log in (start session)         |
 | `/session`     |  `PUT`   | RF1.2    | Refresh session                |
-| `/session`     | `DELETE` | RF1.2    | Log out (end session)          |
 | `/report`      |  `GET`   | RF2.2    | Query reports                  |
 | `/report`      |  `POST`  | RF2.1    | Create incident report         |
 | `/report/<id>` |  `GET`   | RF2.3    | Get report info                |
 | `/report/<id>` |  `PUT`   | RF2.5    | Modify report info             |
 
+<!-- | `/session`     | `DELETE` | RF1.2    | Log out (end session)          | -->
 <!-- | `/report/stats` |  `GET`   | RF2.4    | Get report stats        | -->
 
-### /user querying parameters
+### `/user` querying parameters
 
 | Parameter | Goal                                               | Default |
 | --------- | -------------------------------------------------- | ------- |
 | `name`    | Partial search text of user's first and last names | Any     |
 | `skip`    | Number of users to skip on the search              | None    |
 
-### /report querying parameters
+### `/report` querying parameters
 
 | Parameter  | Goal                                              | Default                                      |
 | ---------- | ------------------------------------------------- | -------------------------------------------- |
@@ -38,6 +38,12 @@
 | `from`     | Filter by lower limit of creationDate (inclusive) | Any                                          |
 | `to`       | Filter by pper limit of creationDate (exclusive)  | Current date                                 |
 | `limit`    | Number of results returned                        | Defined max possible results                 |
+
+### `/image` querying parameters
+
+| Parameter   | Goal                                               | Default |
+| ----------- | -------------------------------------------------- | ------- |
+| `thumbnail` | Request the thumbnail instead of the original file | No      |
 
 ## Role numbers/permission levels
 
@@ -60,4 +66,3 @@
 | `6`    | Leashless Dog     |
 | `7`    | Garbage           |
 | `8`    | Facilities Misuse |
-

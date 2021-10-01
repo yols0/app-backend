@@ -1,11 +1,13 @@
 const Busboy = require('busboy');
 const fs = require('fs');
+const sharp = require('sharp');
 const MongooseError = require('mongoose').Error;
 const { Image } = require('../models');
 const { UnsetEnvError } = require('../utils/errors');
 
 const UPLOADS_DIR = process.env.UPLOADS_DIR;
 const MAX_IMAGE_SIZE = parseInt(process.env.MAX_IMAGE_SIZE) || 5242880;
+const THUMBNAIL_SIZE = parseInt(process.env.THUMBNAIL_SIZE) || 100;
 
 if (!UPLOADS_DIR) {
     throw new UnsetEnvError('UPLOADS_DIR');
@@ -72,29 +74,18 @@ function storeImage(req, res, next) {
             });
             state.imageData.model = image;
 
-            // Use the ObjectId of the model as the filename.
-            const path = `${UPLOADS_DIR}/${image._id}${ext}`;
+            const path = `${UPLOADS_DIR}/${image.fileName}`;
             state.imageData.path = path;
+            state.imageData.thumbnail = `${UPLOADS_DIR}/${image.thumbnail}`;
 
             const writeStream = fs.createWriteStream(path);
+            state.wroteToDisk = true;
 
+            // If this event is called, something horrible has gone wrong.
             writeStream.on('error', (err) => {
                 console.error(err);
                 state.uploadError = true;
-
-                if (err instanceof MongooseError) {
-                    return res.status(400).send({
-                        error: err.message,
-                    });
-                } else {
-                    state.emit('error', err);
-                }
-            });
-            writeStream.on('close', async () => {
-                state.wroteToDisk = true;
-
-                // Only save to the database if the file was successfully written
-                await image.save();
+                state.emit('error', err);
             });
             file.pipe(writeStream);
         }
@@ -102,7 +93,18 @@ function storeImage(req, res, next) {
 
     // Also parse the body
     busboy.on('field', (fieldname, value) => {
-        req.body[fieldname] = value;
+        if (fieldname == 'payload') {
+            try {
+                req.body = JSON.parse(value);
+            } catch (err) {
+                if (err instanceof SyntaxError) {
+                    state.uploadError = true;
+                    return res.status(400).send({
+                        error: 'Invalid JSON payload',
+                    });
+                }
+            }
+        }
     });
 
     busboy.on('error', (err) => {
@@ -113,22 +115,51 @@ function storeImage(req, res, next) {
     // As such, we can use it to clean up any invalid state we might have.
     busboy.on('finish', async () => {
         if (state.uploadError) {
-            // console.warn('File upload error');
-
-            if (state.imageData.model) {
-                await state.imageData.model.remove();
-            }
             if (state.wroteToDisk) {
                 fs.unlinkSync(state.imageData.path);
             }
         } else {
-            // Only continue if there was no error uploading the file.
-            req.body.image = state.imageData.model;
+            const image = state.imageData.model;
+
+            try {
+                // Generate a thumbnail.
+                await generateThumbnail(
+                    state.imageData.path,
+                    state.imageData.thumbnail
+                );
+            } catch (err) {
+                // If for whatever reason the file was not actually what the
+                // mimetype said it was, we should delete it.
+                fs.unlinkSync(state.imageData.path);
+                if (
+                    err.message ===
+                    'Input file contains unsupported image format'
+                ) {
+                    return res.status(415).send({
+                        error: 'Unsupported image format',
+                    });
+                }
+                return next(err);
+            }
+
+            await image.save();
+            req.body.image = image;
             return next();
         }
     });
 
     req.pipe(busboy);
+}
+
+// Generate a thumbnail using the sharp library.
+// This is a separate function because it's not a middleware, but it's
+// convenient to have it here.
+async function generateThumbnail(path, thumbnailPath) {
+    // Generate a thumbnail using the sharp library.
+    await sharp(path)
+        .resize(THUMBNAIL_SIZE, THUMBNAIL_SIZE)
+        .jpeg()
+        .toFile(thumbnailPath);
 }
 
 module.exports = storeImage;

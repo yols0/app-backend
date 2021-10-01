@@ -2,8 +2,10 @@ const express = require('express');
 const MongooseError = require('mongoose').Error;
 const requireToken = require('../../middleware/requireToken');
 const requireFields = require('../../middleware/requireFields');
+const validateId = require('../../middleware/validateId');
+const ignoreFields = require('../../middleware/ignoreFields');
 const requireMinRole = require('../../middleware/requireMinRole');
-const { User } = require('../../models');
+const { User, Report } = require('../../models');
 
 const router = express.Router();
 
@@ -12,115 +14,119 @@ const MAX_USERS_RESULTS = parseInt(process.env.MAX_USERS_RESULTS) || 15;
 // @route   GET api/v1/user
 // @desc    Query users by name
 // @access  Admin
-router.get('/', async (req, res, next) => {
-    const name = req.query.name;
-    const skip = parseInt(req.query.skip) || 0;
+router.get(
+    '/',
+    requireToken('access'),
+    requireMinRole(1),
+    async (req, res, next) => {
+        const name = req.query.name;
+        const skip = parseInt(req.query.skip) || 0;
 
-    if (!name) {
-        return res.status(400).send({
-            error: 'Query parameter name is required',
-        });
-    }
+        if (!name) {
+            return res.status(400).send({
+                error: 'Query parameter name is required',
+            });
+        }
 
-    try {
-        const users = await User.aggregate([
-            { $match: { $text: { $search: name } } },
-            { $sort: { score: { $meta: 'textScore' } } },
-            { $skip: skip },
-            { $limit: MAX_USERS_RESULTS },
-            {
-                $project: {
-                    _id: 0,
-                    id: '$_id',
-                    firstName: 1,
-                    lastName: 1,
+        try {
+            const users = await User.aggregate([
+                { $match: { $text: { $search: name } } },
+                { $sort: { score: { $meta: 'textScore' } } },
+                { $skip: skip },
+                { $limit: MAX_USERS_RESULTS },
+                {
+                    $project: {
+                        _id: 0,
+                        id: '$_id',
+                        firstName: 1,
+                        lastName: 1,
+                        profilePicture: 1,
+                    },
                 },
-            },
-        ]);
-        return res.send(users);
-    } catch (err) {
-        return next(err);
+            ]);
+            return res.send(users);
+        } catch (err) {
+            return next(err);
+        }
     }
-});
+);
 
 // @route   POST api/v1/user
 // @desc    Create user
 // @access  Public
-router.post('/', (req, res, next) => {
-    // res.status(500).send('Not implemented');
-    try {
-        // Sanitize to prevent abuse
-        const sanitizedData = req.body;
+router.post(
+    '/',
+    ignoreFields('_id', '__v', 'role', 'lastSeen'),
+    (req, res, next) => {
+        try {
+            // The password is hashed when the user model is created
+            req.body.pwHash = req.body.password;
+            delete req.body.password;
 
-        // The password is hashed when the user model is created
-        sanitizedData.pwHash = sanitizedData.password;
-
-        delete sanitizedData._id;
-        delete sanitizedData.__v;
-        delete sanitizedData.password;
-        delete sanitizedData.role;
-
-        // Create and save user
-        const user = new User(sanitizedData);
-        user.save((err, user) => {
-            if (err) {
-                // Error when invalid fields are sent
-                if (err instanceof MongooseError.ValidationError) {
-                    return res.status(400).send({ error: err.message });
+            // Create and save user
+            const user = new User(req.body);
+            user.save((err, user) => {
+                if (err) {
+                    // Error when invalid fields are sent
+                    if (err instanceof MongooseError.ValidationError) {
+                        return res.status(400).send({ error: err.message });
+                    }
+                    // Error when a duplicate email is sent
+                    else if (err.code === 11000) {
+                        return res
+                            .status(400)
+                            .send({ error: 'User already exists' });
+                    } else {
+                        throw err;
+                    }
                 }
-                // Error when a duplicate email is sent
-                else if (err.code === 11000) {
-                    return res
-                        .status(400)
-                        .send({ error: 'User already exists' });
-                } else {
-                    throw err;
-                }
-            }
 
-            res.status(201).send(user.getFullData());
-        });
-    } catch (err) {
-        return next(err);
+                res.status(201).send(user.getFullData());
+            });
+        } catch (err) {
+            return next(err);
+        }
     }
-});
+);
 
 // @route   PUT api/v1/user
 // @desc    Update user
 // @access  Private
-router.put('/', requireToken(), async (req, res, next) => {
-    try {
-        // Sanitize to prevent abuse
-        const sanitizedData = req.body;
+router.put(
+    '/',
+    requireToken(),
+    ignoreFields('_id', '__v', 'role', 'lastSeen'),
+    async (req, res, next) => {
+        try {
+            // The password is hashed when the user model is created
+            req.body.pwHash = req.body.password;
+            delete req.body.password;
 
-        // The password is hashed when the user model is created
-        sanitizedData.pwHash = sanitizedData.password;
+            const user = await User.findByIdAndUpdate(req.user.id, req.body, {
+                new: true,
+            });
+            if (!user) {
+                return res.status(404).send({ error: 'User not found' });
+            }
 
-        delete sanitizedData._id;
-        delete sanitizedData.__v;
-        delete sanitizedData.password;
-        delete sanitizedData.role;
-
-        const user = await User.findByIdAndUpdate(req.user.id, sanitizedData, {
-            new: true,
-        });
-
-        if (!user) {
-            return res.status(404).send({ error: 'User not found' });
+            return res.send(user.getFullData());
+        } catch (err) {
+            return next(err);
         }
-
-        return res.status(204).send(user.getFullData());
-    } catch (err) {
-        return next(err);
     }
-});
+);
 
 // @route   DELETE api/v1/user
 // @desc    Delete user
 // @access  Private
 router.delete('/', requireToken(), async (req, res, next) => {
     try {
-        const user = await User.findByIdAndDelete(req.user.id);
+        const user = await User.findById(req.user.id);
+        if (!user) {
+            return res.status(404).send({ error: 'User not found' });
+        }
+
+        await user.remove();
         return res.send(user.getFullData());
     } catch (err) {
         return next(err);
@@ -134,14 +140,15 @@ router.get(
     '/:id',
     requireToken(),
     requireMinRole(1),
+    validateId,
     async (req, res, next) => {
-        if (!req.params.id) {
-            return res.status(400).send({ error: 'Missing id.' });
-        }
-
         try {
             const user = await User.findById(req.params.id);
-            return res.status(200).send(user.getPublicData());
+            if (!user) {
+                return res.status(404).send({ error: 'User not found' });
+            }
+
+            return res.send(user.getPublicData());
         } catch (err) {
             return next(err);
         }
@@ -156,6 +163,7 @@ router.put(
     requireToken(),
     requireMinRole(1),
     requireFields('role'),
+    validateId,
     async (req, res, next) => {
         try {
             const { role } = req.body;
@@ -164,11 +172,12 @@ router.put(
                 { role },
                 { new: true }
             );
+            if (!user) {
+                return res.status(404).send({ error: 'User not found' });
+            }
+
             return res.status(204).send();
         } catch (err) {
-            if (err instanceof MongooseError.CastError) {
-                return res.status(400).send({ error: 'Invalid id' });
-            }
             return next(err);
         }
     }

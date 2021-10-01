@@ -17,11 +17,13 @@ const REFRESH_EXPIRATION = parseInt(process.env.REFRESH_EXPIRATION) || 259200;
 const router = express.Router();
 
 // @route   GET api/v1/session
-// @desc    Get current user
+// @desc    Get current user and update last seen
 // @access  Private
 router.get('/', requireToken(), async (req, res, next) => {
     try {
         const user = await User.findById(req.user.id);
+        user.lastSeen = Date.now();
+        await user.save();
         res.send(user.getFullData());
     } catch (err) {
         return next(err);
@@ -50,7 +52,7 @@ router.post('/', requireFields('email', 'password'), async (req, res, next) => {
             });
         }
 
-        const tokens = await generateTokens(user.id, user.role);
+        const tokens = generateTokens(user.id, user.role);
         res.send(tokens);
     } catch (err) {
         return next(err);
@@ -69,14 +71,7 @@ router.put('/', requireToken('refresh'), (req, res, next) => {
     }
 });
 
-// @route   DELETE api/v1/session
-// @desc    Delete current session
-// @access  Private
-router.delete('/', (_, res) => {
-    res.status(204).send();
-});
-
-async function generateTokens(id, role) {
+function generateTokens(id, role) {
     return {
         access: jwt.sign({ id, role, type: 'access' }, TOKEN_SECRET, {
             expiresIn: ACCESS_EXPIRATON,

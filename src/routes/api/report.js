@@ -1,12 +1,12 @@
 const fs = require('fs');
 const express = require('express');
-const MongooseError = require('mongoose').Error;
 const requireToken = require('../../middleware/requireToken');
 const uploadImage = require('../../middleware/uploadImage');
 const validateId = require('../../middleware/validateId');
+const ignoreFields = require('../../middleware/ignoreFields');
+const requireMinRole = require('../../middleware/requireMinRole');
 const { ApiRequestError, InvalidReportError } = require('../../utils/errors');
 const { Report } = require('../../models');
-const requireMinRole = require('../../middleware/requireMinRole');
 
 const UPLOADS_DIR = process.env.UPLOADS_DIR;
 
@@ -49,7 +49,7 @@ router.get('/', async (req, res, next) => {
     );
 
     try {
-        console.log(query);
+        // console.log(query);
 
         // Also aggregates the reports with the creators' name
         const reports = await Report.aggregate([
@@ -68,7 +68,7 @@ router.get('/', async (req, res, next) => {
                     _id: 0,
                     id: '$_id',
                     creationDate: 1,
-                    creator: 1,
+                    // creator: 1,
                     creatorFirstName: {
                         $arrayElemAt: ['$creatorInfo.firstName', 0],
                     },
@@ -92,32 +92,39 @@ router.get('/', async (req, res, next) => {
 // @route   POST api/v1/report
 // @desc    Create a report
 // @access  Private
-router.post('/', uploadImage, async (req, res, next) => {
-    // This flow uses exceptions pretty much exclusively just to also handle
-    // obscure or unexpected errors that may occur.
-    try {
-        if (!('category' in req.body)) {
-            throw new ApiRequestError('Missing category', 400);
-        }
+router.post(
+    '/',
+    uploadImage,
+    ignoreFields('_id', '__v', 'creationDate', 'status', 'endMessage'),
+    async (req, res, next) => {
+        // This flow uses exceptions pretty much exclusively just to also handle
+        // obscure or unexpected errors that may occur.
+        try {
+            if (!('category' in req.body)) {
+                throw new ApiRequestError('Missing category', 400);
+            }
 
-        req.body.creator = req.user.id;
-        const report = await Report.create(req.body);
-        return res.send(report);
-    } catch (err) {
-        // Remove the image from the directory and database.
-        if (req.body.image) {
-            fs.unlinkSync(`${UPLOADS_DIR}/${req.body.image.fileName}`);
-            await req.body.image.remove();
-        }
+            req.body.creator = req.user.id;
 
-        if (err instanceof ApiRequestError) {
-            return res.status(err.statusCode).send({ error: err.message });
-        } else if (err instanceof InvalidReportError) {
-            return res.status(400).send({ error: err.message });
+            // console.log('report body: ', req.body);
+
+            const report = await Report.create(req.body);
+            return res.send(report.getData());
+        } catch (err) {
+            // Remove the image from the directory and database.
+            if (req.body.image) {
+                await req.body.image.remove();
+            }
+
+            if (err instanceof ApiRequestError) {
+                return res.status(err.statusCode).send({ error: err.message });
+            } else if (err instanceof InvalidReportError) {
+                return res.status(400).send({ error: err.message });
+            }
+            return next(err);
         }
-        return next(err);
     }
-});
+);
 
 // @route  GET api/v1/report/:id
 // @desc   Get report by id
@@ -125,9 +132,17 @@ router.post('/', uploadImage, async (req, res, next) => {
 router.get('/:id', validateId, async (req, res, next) => {
     try {
         const report = await Report.findById(req.params.id);
+        if (req.user.role >= 2 && report.creator != req.user.id) {
+            return res
+                .status(403)
+                .send({ error: "User can't access this report" });
+        }
+
         if (!report) {
             return res.status(404).send({ error: 'Report not found' });
         }
+
+        // console.log(report);
 
         return res.send(report.getData());
     } catch (err) {
@@ -138,33 +153,31 @@ router.get('/:id', validateId, async (req, res, next) => {
 // @route  PUT api/v1/report/:id
 // @desc   Update report by id
 // @access Admin
-router.put('/:id', requireMinRole(1), async (req, res, next) => {
-    try {
-        const sanitizedData = req.body;
+router.put(
+    '/:id',
+    requireMinRole(1),
+    ignoreFields('_id', '__v', 'creationDate', 'creator'),
+    async (req, res, next) => {
+        try {
+            const report = await Report.findByIdAndUpdate(
+                req.params.id,
+                req.body,
+                { new: true }
+            );
 
-        delete sanitizedData._id;
-        delete sanitizedData.__v;
-        delete sanitizedData.creator;
-        delete sanitizedData.creationDate;
+            if (!report) {
+                return res.status(404).send({ error: 'Report not found' });
+            }
 
-        const report = await Report.findByIdAndUpdate(
-            req.params.id,
-            sanitizedData,
-            { new: true }
-        );
-
-        if (!report) {
-            return res.status(404).send({ error: 'Report not found' });
+            return res.send(report.getData());
+        } catch (err) {
+            if (err instanceof InvalidReportError) {
+                return res.status(400).send({ error: err.message });
+            }
+            return next(err);
         }
-
-        return res.send(report.getData());
-    } catch (err) {
-        if (err instanceof InvalidReportError) {
-            return res.status(400).send({ error: err.message });
-        }
-        return next(err);
     }
-});
+);
 
 /*         // 1 day as base offset in milliseconds
         let timestampOffset = 24 * 60 * 60 * 1000;
