@@ -132,14 +132,17 @@ router.post(
 router.get('/:id', validateId, async (req, res, next) => {
     try {
         const report = await Report.findById(req.params.id);
+        if (!report) {
+            return res.status(404).send({ error: 'Report not found' });
+        }
+
+        // console.log(report.creator);
+        // console.log(req.user.id);
+
         if (req.user.role >= 2 && report.creator != req.user.id) {
             return res
                 .status(403)
                 .send({ error: "User can't access this report" });
-        }
-
-        if (!report) {
-            return res.status(404).send({ error: 'Report not found' });
         }
 
         // console.log(report);
