@@ -9,6 +9,11 @@ const { randomIntGenerator } = require('../utils');
 const SALT_ROUNDS = parseInt(process.env.SALT_ROUNDS) || 10;
 
 const userSchema = new Schema({
+    _id: {
+        required: true,
+        type: Schema.Types.ObjectId,
+        default: mongoose.Types.ObjectId,
+    },
     email: {
         type: String,
         required: [true, 'Email is required'],

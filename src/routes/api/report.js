@@ -7,6 +7,8 @@ const ignoreFields = require('../../middleware/ignoreFields');
 const requireMinRole = require('../../middleware/requireMinRole');
 const { ApiRequestError, InvalidReportError } = require('../../utils/errors');
 const { Report } = require('../../models');
+const ValidationError = require('mongoose').Error.ValidationError;
+const { roles } = require('../../utils/constants');
 
 const UPLOADS_DIR = process.env.UPLOADS_DIR;
 
@@ -109,6 +111,8 @@ router.post(
             // console.log('report body: ', req.body);
 
             const report = await Report.create(req.body);
+            // console.log('report created: ', report);
+
             return res.send(report.getData());
         } catch (err) {
             // Remove the image from the directory and database.
@@ -118,7 +122,10 @@ router.post(
 
             if (err instanceof ApiRequestError) {
                 return res.status(err.statusCode).send({ error: err.message });
-            } else if (err instanceof InvalidReportError) {
+            } else if (
+                err instanceof InvalidReportError ||
+                err instanceof ValidationError
+            ) {
                 return res.status(400).send({ error: err.message });
             }
             return next(err);
@@ -158,7 +165,7 @@ router.get('/:id', validateId, async (req, res, next) => {
 // @access Admin
 router.put(
     '/:id',
-    requireMinRole(1),
+    requireMinRole(roles.ADMIN),
     ignoreFields('_id', '__v', 'creationDate', 'creator'),
     async (req, res, next) => {
         try {

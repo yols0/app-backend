@@ -13,6 +13,15 @@ if (!UPLOADS_DIR) {
     throw new UnsetEnvError('UPLOADS_DIR');
 }
 
+const existingDirPromise = fs.promises
+    .mkdir(UPLOADS_DIR, { recursive: true })
+    .then(console.log('Created uploads directory ' + UPLOADS_DIR))
+    .catch((err) => {
+        if (err.code !== 'EEXIST') {
+            throw err;
+        }
+    });
+
 // Middleware for uploading images, and also parses multiform data instead of
 // JSON.
 // Likely not the best way to do this, but it works for now.
@@ -78,6 +87,7 @@ function storeImage(req, res, next) {
             state.imageData.path = path;
             state.imageData.thumbnail = `${UPLOADS_DIR}/${image.thumbnail}`;
 
+            await existingDirPromise;
             const writeStream = fs.createWriteStream(path);
             state.wroteToDisk = true;
 
@@ -116,7 +126,7 @@ function storeImage(req, res, next) {
     busboy.on('finish', async () => {
         if (state.uploadError) {
             if (state.wroteToDisk) {
-                fs.unlinkSync(state.imageData.path);
+                await fs.promises.unlink(state.imageData.path);
             }
         } else {
             const image = state.imageData.model;
@@ -130,7 +140,7 @@ function storeImage(req, res, next) {
             } catch (err) {
                 // If for whatever reason the file was not actually what the
                 // mimetype said it was, we should delete it.
-                fs.unlinkSync(state.imageData.path);
+                await fs.promises.unlink(state.imageData.path);
                 if (
                     err.message ===
                     'Input file contains unsupported image format'
