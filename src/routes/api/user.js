@@ -5,7 +5,8 @@ const requireFields = require('../../middleware/requireFields');
 const validateId = require('../../middleware/validateId');
 const ignoreFields = require('../../middleware/ignoreFields');
 const requireMinRole = require('../../middleware/requireMinRole');
-const { User, Report } = require('../../models');
+const { User } = require('../../models');
+const { roles } = require('../../utils/constants');
 
 const router = express.Router();
 
@@ -17,7 +18,7 @@ const MAX_USERS_RESULTS = parseInt(process.env.MAX_USERS_RESULTS) || 15;
 router.get(
     '/',
     requireToken('access'),
-    requireMinRole(1),
+    requireMinRole(roles.ADMIN),
     async (req, res, next) => {
         const name = req.query.name;
         const skip = parseInt(req.query.skip) || 0;
@@ -139,7 +140,7 @@ router.delete('/', requireToken(), async (req, res, next) => {
 router.get(
     '/:id',
     requireToken(),
-    requireMinRole(1),
+    requireMinRole(roles.ADMIN),
     validateId,
     async (req, res, next) => {
         try {
@@ -161,7 +162,7 @@ router.get(
 router.put(
     '/:id',
     requireToken(),
-    requireMinRole(1),
+    requireMinRole(roles.ADMIN),
     requireFields('role'),
     validateId,
     async (req, res, next) => {

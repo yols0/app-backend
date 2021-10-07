@@ -9,6 +9,11 @@ if (!UPLOADS_DIR) {
 }
 
 const imageSchema = new Schema({
+    _id: {
+        required: true,
+        type: Schema.Types.ObjectId,
+        default: mongoose.Types.ObjectId,
+    },
     extension: {
         type: String,
         enum: {

@@ -8,22 +8,17 @@ const { ReportFactory } = require('../utils/reportDefinitions');
 // Schema used for a GeoJSON point
 const pointSchema = new Schema({
     _id: false,
-    type: {
-        type: String,
-        enum: {
-            values: ['Point'],
-            message: 'Location data must be Point',
-        },
-        required: [true, 'Location data type is required'],
-    },
-    coordinates: {
-        type: [Number],
-        required: [true, 'Location coordinates are required'],
-    },
+    latitude: { type: Number, required: true },
+    longitude: { type: Number, required: true },
 });
 
 // Actual report schema
 const reportSchema = new Schema({
+    _id: {
+        required: true,
+        type: Schema.Types.ObjectId,
+        default: mongoose.Types.ObjectId,
+    },
     category: {
         type: Int32,
         required: [true, 'Category is required'],
@@ -98,6 +93,8 @@ reportSchema.pre('validate', function (next) {
 });
 
 reportSchema.methods.getData = function () {
+    console.log(this);
+
     const data = {
         id: this._id,
         category: this.category.toString(),
@@ -109,7 +106,7 @@ reportSchema.methods.getData = function () {
         locationString: this.locationString,
         locationGeo: this.locationGeo,
         desc: this.desc,
-        image: this.image._id,
+        image: this.image && this.image._id,
     };
 
     // Delete undefined fields
