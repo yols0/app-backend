@@ -1,4 +1,3 @@
-const fs = require('fs');
 const express = require('express');
 const requireToken = require('../../middleware/requireToken');
 const uploadImage = require('../../middleware/uploadImage');
@@ -9,6 +8,8 @@ const { ApiRequestError, InvalidReportError } = require('../../utils/errors');
 const { Report } = require('../../models');
 const ValidationError = require('mongoose').Error.ValidationError;
 const { roles } = require('../../utils/constants');
+const { UnsetEnvError } = require('../../utils/errors');
+const { notifyCreator, notifyAdmins } = require('../../fcm');
 
 const UPLOADS_DIR = process.env.UPLOADS_DIR;
 
@@ -29,7 +30,7 @@ router.use(requireToken());
 router.get('/', async (req, res, next) => {
     const { status, category, creator, from, to } = req.query;
 
-    const query = { status, category, creator };
+    let query = { creator };
     if (from || to) {
         query.creationDate = {};
         if (from) {
@@ -40,10 +41,34 @@ router.get('/', async (req, res, next) => {
         }
     }
 
+    // Split statuses separated by comma into array query
+    if (status) {
+        const statusValues = status
+            .split(',')
+            .map(Number)
+            .filter((x) => !Number.isNaN(x));
+        if (statusValues.length) {
+            query.status = { $in: statusValues };
+        }
+    }
+
+    // Split categories separated by comma into array query
+    if (category) {
+        const categoryValues = category
+            .split(',')
+            .map(Number)
+            .filter((x) => !Number.isNaN(x));
+        if (categoryValues.length) {
+            query.category = { $in: categoryValues };
+        }
+    }
+
     // Delete all keys with undefined values
     Object.keys(query).forEach((key) =>
         query[key] === undefined ? delete query[key] : {}
     );
+
+    console.log(query);
 
     const limit = Math.min(
         MAX_REPORTS_RESULTS,
@@ -51,10 +76,8 @@ router.get('/', async (req, res, next) => {
     );
 
     try {
-        // console.log(query);
-
         // Also aggregates the reports with the creators' name
-        const reports = await Report.aggregate([
+        const pipeline = [
             { $match: query },
             { $limit: limit },
             {
@@ -83,7 +106,10 @@ router.get('/', async (req, res, next) => {
                 },
             },
             { $sort: { creationDate: -1 } },
-        ]);
+        ];
+        console.log(pipeline);
+
+        const reports = await Report.aggregate(pipeline);
 
         return res.send(reports);
     } catch (err) {
@@ -108,12 +134,11 @@ router.post(
 
             req.body.creator = req.user.id;
 
-            // console.log('report body: ', req.body);
-
             const report = await Report.create(req.body);
-            // console.log('report created: ', report);
 
-            return res.send(report.getData());
+            notifyAdmins(report);
+
+            return res.send(await report.getData());
         } catch (err) {
             // Remove the image from the directory and database.
             if (req.body.image) {
@@ -143,18 +168,14 @@ router.get('/:id', validateId, async (req, res, next) => {
             return res.status(404).send({ error: 'Report not found' });
         }
 
-        // console.log(report.creator);
-        // console.log(req.user.id);
-
-        if (req.user.role >= 2 && report.creator != req.user.id) {
+        includeCreatorName = false;
+        if (!(req.user.role <= roles.ADMIN) && report.creator != req.user.id) {
             return res
                 .status(403)
                 .send({ error: "User can't access this report" });
         }
 
-        // console.log(report);
-
-        return res.send(report.getData());
+        return res.send(await report.getData());
     } catch (err) {
         return next(err);
     }
@@ -179,7 +200,9 @@ router.put(
                 return res.status(404).send({ error: 'Report not found' });
             }
 
-            return res.send(report.getData());
+            notifyCreator(report);
+
+            return res.send(await report.getData());
         } catch (err) {
             if (err instanceof InvalidReportError) {
                 return res.status(400).send({ error: err.message });

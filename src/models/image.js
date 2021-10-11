@@ -1,6 +1,7 @@
 const fs = require('fs');
 const mongoose = require('mongoose');
 const { Schema } = mongoose;
+const { UnsetEnvError } = require('../utils/errors');
 
 const UPLOADS_DIR = process.env.UPLOADS_DIR;
 

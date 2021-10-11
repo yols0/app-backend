@@ -2,6 +2,7 @@ const express = require('express');
 const requireToken = require('../../middleware/requireToken');
 const validateId = require('../../middleware/validateId');
 const { Report, Image } = require('../../models');
+const { UnsetEnvError } = require('../../utils/errors');
 
 const router = express.Router();
 
@@ -26,9 +27,6 @@ router.get('/:id', validateId, async (req, res, next) => {
         if (req.user.role >= 2) {
             // Find if the image belongs to a report created by the user
             const report = await Report.findOne({ 'image._id': image._id });
-
-            // console.log('param: ', req.params.id);
-            // console.log('report: ', report);
 
             if (report.creator != req.user.id) {
                 return res

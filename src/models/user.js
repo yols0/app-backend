@@ -4,6 +4,7 @@ const { Schema } = mongoose;
 const Int32 = require('mongoose-int32').loadType(mongoose);
 const { isEmail } = require('validator');
 const { randomIntGenerator } = require('../utils');
+const { roles } = require('../utils/constants');
 
 // Optinally specify salt rounds
 const SALT_ROUNDS = parseInt(process.env.SALT_ROUNDS) || 10;
@@ -45,12 +46,8 @@ const userSchema = new Schema({
     role: {
         type: Int32,
         required: true,
-        default: 2,
-    },
-    notificationsEnabled: {
-        type: Boolean,
-        required: true,
-        default: true,
+        enum: roles,
+        default: roles.VISITOR,
     },
     appNotificationsEnabled: {
         type: Boolean,
@@ -65,12 +62,7 @@ const userSchema = new Schema({
     profilePicture: {
         type: Int32,
         required: true,
-        default: randomIntGenerator(0, 25),
-    },
-    lastSeen: {
-        type: Date,
-        required: true,
-        default: Date.now,
+        default: randomIntGenerator(0, 16),
     },
 });
 
@@ -109,6 +101,7 @@ userSchema.methods.validatePassword = async function (password) {
 userSchema.methods.getPublicData = function () {
     return {
         id: this._id,
+        role: this.role,
         firstName: this.firstName,
         lastName: this.lastName,
         email: this.email,
@@ -124,10 +117,9 @@ userSchema.methods.getFullData = function () {
         lastName: this.lastName,
         email: this.email,
         role: this.role,
-        notificationsEnabled: this.notificationsEnabled,
+        profilePicture: this.profilePicture,
         appNotificationsEnabled: this.appNotificationsEnabled,
         emailNotificationsEnabled: this.emailNotificationsEnabled,
-        profilePicture: this.profilePicture,
     };
 };
 

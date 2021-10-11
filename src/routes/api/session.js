@@ -40,14 +40,14 @@ router.post('/', requireFields('email', 'password'), async (req, res, next) => {
 
         // Email not found
         if (!user) {
-            return res.status(400).send({
+            return res.status(401).send({
                 error: 'Invalid credentials',
             });
         }
 
         // Password incorrect
         if (!(await user.validatePassword(password))) {
-            return res.status(400).send({
+            return res.status(401).send({
                 error: 'Invalid credentials',
             });
         }

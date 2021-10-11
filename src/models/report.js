@@ -4,6 +4,7 @@ const Int32 = require('mongoose-int32').loadType(mongoose);
 const imageSchema = require('./image');
 const { InvalidReportError } = require('../utils/errors');
 const { ReportFactory } = require('../utils/reportDefinitions');
+const { status, category } = require('../utils/constants');
 
 // Schema used for a GeoJSON point
 const pointSchema = new Schema({
@@ -22,6 +23,7 @@ const reportSchema = new Schema({
     category: {
         type: Int32,
         required: [true, 'Category is required'],
+        // enum: category,
     },
     creationDate: {
         type: Date,
@@ -31,7 +33,8 @@ const reportSchema = new Schema({
     status: {
         type: Int32,
         required: true,
-        default: 0,
+        enum: status,
+        default: status.PENDING,
     },
     endMessage: {
         type: String,
@@ -92,9 +95,10 @@ reportSchema.pre('validate', function (next) {
     }
 });
 
-reportSchema.methods.getData = function () {
+reportSchema.methods.getData = async function () {
     console.log(this);
 
+    const user = await this.model('User').findById(this.creator);
     const data = {
         id: this._id,
         category: this.category.toString(),
@@ -107,6 +111,8 @@ reportSchema.methods.getData = function () {
         locationGeo: this.locationGeo,
         desc: this.desc,
         image: this.image && this.image._id,
+        creatorFirstName: user.firstName,
+        creatorLastName: user.lastName,
     };
 
     // Delete undefined fields

@@ -1,7 +1,7 @@
 module.exports = function (role) {
     return function (req, res, next) {
         // This shouldn't happen if the session middleware is applied beforehand
-        if (!req.user || !req.user.role) {
+        if (req.user === undefined || req.user.role === undefined) {
             return next(new Error('User role not found'));
         }
 

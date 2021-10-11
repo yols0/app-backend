@@ -1,4 +1,5 @@
 const { InvalidReportError } = require('./errors');
+const { category } = require('./constants');
 
 // Character to use to join error messages when aggregating
 const JOIN_CHAR = ' ';
@@ -114,22 +115,23 @@ class OtherReport extends DescribedReport {}
 
 // Factory to instantiate a Report object given a category number
 class ReportFactory {
-    static types = [
-        OtherReport,
-        LuminaryReport,
-        DogFecesReport,
-        BranchesReport,
-        OvergrownGrassReport,
-        FacilitiesFaultReport,
-        LeashlessDogReport,
-        GarbageReport,
-        FacilitiesMisuseReport,
-    ];
-    static getReport(categoryNumber, data) {
-        const reportType = ReportFactory.types[categoryNumber];
+    static types = {
+        [category.OTHER]: OtherReport,
+        [category.LUMINARY]: LuminaryReport,
+        [category.DOG_FECES]: DogFecesReport,
+        [category.BRANCHES]: BranchesReport,
+        [category.OVERGROWN_GRASS]: OvergrownGrassReport,
+        [category.FACILITIES_FAULT]: FacilitiesFaultReport,
+        [category.LEASHLESS_DOG]: LeashlessDogReport,
+        [category.GARBAGE]: GarbageReport,
+        [category.FACILITIES_MISUSE]: FacilitiesMisuseReport,
+    };
+
+    static getReport(cat, data) {
+        const reportType = ReportFactory.types[cat];
         if (!reportType) {
             throw new InvalidReportError(
-                `Invalid report category number: ${categoryNumber}`
+                `Invalid report category type: ${cat}`
             );
         }
         return new reportType(data);
