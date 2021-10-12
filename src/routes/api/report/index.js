@@ -1,15 +1,20 @@
 const express = require('express');
-const requireToken = require('../../middleware/requireToken');
-const uploadImage = require('../../middleware/uploadImage');
-const validateId = require('../../middleware/validateId');
-const ignoreFields = require('../../middleware/ignoreFields');
-const requireMinRole = require('../../middleware/requireMinRole');
-const { ApiRequestError, InvalidReportError } = require('../../utils/errors');
-const { Report } = require('../../models');
+const { ObjectId } = require('mongoose').Types;
+const requireToken = require('../../../middleware/requireToken');
+const uploadImage = require('../../../middleware/uploadImage');
+const validateId = require('../../../middleware/validateId');
+const ignoreFields = require('../../../middleware/ignoreFields');
+const requireMinRole = require('../../../middleware/requireMinRole');
+const {
+    ApiRequestError,
+    InvalidReportError,
+} = require('../../../utils/errors');
+const { Report } = require('../../../models');
 const ValidationError = require('mongoose').Error.ValidationError;
-const { roles } = require('../../utils/constants');
-const { UnsetEnvError } = require('../../utils/errors');
-const { notifyCreator, notifyAdmins } = require('../../fcm');
+const { roles } = require('../../../utils/constants');
+const { UnsetEnvError } = require('../../../utils/errors');
+const { notifyCreator, notifyAdmins } = require('../../../fcm');
+const statsRoutes = require('./stats');
 
 const UPLOADS_DIR = process.env.UPLOADS_DIR;
 
@@ -24,13 +29,23 @@ const router = express.Router();
 // All operations require a valid token
 router.use(requireToken());
 
+// Include the stats subroutes
+router.use('/stats', statsRoutes);
+
 // @route   GET api/v1/report
 // @desc    Query reports
 // @access  Private
 router.get('/', async (req, res, next) => {
     const { status, category, creator, from, to } = req.query;
 
-    let query = { creator };
+    let query = {};
+
+    if (req.user.role >= roles.VISITOR) {
+        query.creator = ObjectId(req.user.id);
+    } else if (creator) {
+        query.creator = ObjectId(creator);
+    }
+
     if (from || to) {
         query.creationDate = {};
         if (from) {
@@ -67,8 +82,6 @@ router.get('/', async (req, res, next) => {
     Object.keys(query).forEach((key) =>
         query[key] === undefined ? delete query[key] : {}
     );
-
-    console.log(query);
 
     const limit = Math.min(
         MAX_REPORTS_RESULTS,
@@ -107,7 +120,6 @@ router.get('/', async (req, res, next) => {
             },
             { $sort: { creationDate: -1 } },
         ];
-        console.log(pipeline);
 
         const reports = await Report.aggregate(pipeline);
 
@@ -211,33 +223,5 @@ router.put(
         }
     }
 );
-
-/*         // 1 day as base offset in milliseconds
-        let timestampOffset = 24 * 60 * 60 * 1000;
-
-        if (sinceLast == undefined) {
-            timestampOffset = null;
-        } else if (sinceLast == 'day') {
-            timestampOffset = 0;
-        } else if (sinceLast == 'week') {
-            timestampOffset = timestampOffset * 6;
-        } else if (sinceLast == 'month') {
-            timestampOffset = timestampOffset * 29;
-        } else if (sinceLast == 'year') {
-            timestampOffset = timestampOffset * 364;
-        } else {
-            return res.status(400).send({
-                error: `Invalid sinceLast query parameter: ${sinceLast}`,
-            });
-        }
-
-        if (timestampOffset !== null) {
-            // Rewind date to the beginning of the day
-            const startDate = new Date(Date.now() - timestampOffset);
-            startDate.setHours(0, 0, 0, 0);
-            console.log(+startDate);
-
-            query.creationDate = { $gte: startDate };
-        } */
 
 module.exports = router;

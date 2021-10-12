@@ -57,7 +57,7 @@ async function notifyCreator(report, creator) {
         },
         data: {
             notificationType: 'report_update',
-            reportId: report._id,
+            reportId: report._id.toString(),
         },
     };
 
@@ -83,9 +83,11 @@ function notifyAdmins(report) {
         },
         data: {
             notificationType: 'report_create',
-            reportId: report._id,
+            reportId: report._id.toString(),
         },
     };
+
+    console.log(message);
 
     return admin
         .messaging()

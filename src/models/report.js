@@ -96,8 +96,6 @@ reportSchema.pre('validate', function (next) {
 });
 
 reportSchema.methods.getData = async function () {
-    console.log(this);
-
     const user = await this.model('User').findById(this.creator);
     const data = {
         id: this._id,

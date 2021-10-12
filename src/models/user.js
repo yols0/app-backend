@@ -90,6 +90,8 @@ userSchema.pre('remove', async function (next) {
             await report.remove();
         })
     );
+
+    return next();
 });
 
 // Compare a plain text password against the hashed password

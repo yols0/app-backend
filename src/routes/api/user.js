@@ -7,6 +7,7 @@ const ignoreFields = require('../../middleware/ignoreFields');
 const requireMinRole = require('../../middleware/requireMinRole');
 const { User, FcmToken } = require('../../models');
 const { roles } = require('../../utils/constants');
+const { ObjectId } = require('mongoose').Types;
 const {
     subscribeToReportCreationTopic,
     unsubscribeFromReportCreationTopic,
@@ -66,7 +67,7 @@ router.get(
 // @access  Public
 router.post(
     '/',
-    ignoreFields('_id', '__v', 'role', 'lastSeen'),
+    ignoreFields('_id', '__v', 'role', 'profilePicture'),
     (req, res, next) => {
         try {
             // The password is hashed when the user model is created
@@ -199,7 +200,7 @@ router.put(
                 }
             }
 
-            return res.status(204).send();
+            return res.send(user.getPublicData());
         } catch (err) {
             return next(err);
         }
@@ -230,7 +231,7 @@ router.post(
 
             // If so, do nothing
             if (savedToken.length) {
-                return res.status(204).send();
+                return res.send({ updated: true });
             }
 
             // If not, save the token to the database
@@ -244,7 +245,7 @@ router.post(
                 subscribeToReportCreationTopic(user._id, newToken.value);
             }
 
-            return res.status(204).send();
+            return res.status.send({ updated: true });
         } catch (err) {
             return next(err);
         }
